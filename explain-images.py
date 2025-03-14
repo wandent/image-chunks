@@ -17,43 +17,7 @@ client = AzureOpenAI( azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
     )
 # read the chunks on the chunks directory and return the list of chunks as a bidimentional array
 
-def count_tokens(message)-> int:
-    # calculate the amount of openai input tokens in the message using the tiktoken library
-    encoding = tiktoken.encoding_for_model(os.getenv('AZURE_OPENAI_DEPLOYMENT'))
-    total_tokens = 0
-    
-    for msg in message:
-        content = msg.get('content', '')
-        # Check if the content is a base64 image
-        if isinstance(content, str) and content.startswith('data:image'):
-            # Get image quality level
-            detail = msg.get('detail', 'high')
-            
-            # Extract base64 data
-            base64_data = content.split('base64,')[1] if 'base64,' in content else ''
-            
-            if base64_data:
-                try:
-                    image_data = base64.b64decode(base64_data)
-                    img = Image.open(BytesIO(image_data))
-                    width, height = img.size
-                    
-                    # Calculate tokens based on dimensions and quality
-                    if detail == "low":
-                        image_tokens = int((width * height) / (512 * 512) * 85)
-                    else:  # "high" or default
-                        image_tokens = int((width * height) / (512 * 512) * 170)
-                    
-                    total_tokens += max(image_tokens, 1)
-                except Exception:
-                    total_tokens += len(encoding.encode(content))
-            else:
-                total_tokens += len(encoding.encode(content))
-        else:
-            # Regular text content
-            total_tokens += len(encoding.encode(content))
-    
-    return total_tokens
+
 
 
 def read_chunks():
@@ -78,29 +42,12 @@ def explain_image_chunk(chunk):
         prompt = "Explain the content of the following image chunk: "
         message= [{"role": "user", "content": [{"type": "text", "content": prompt}]}]
         message[0]['content'].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"}, "detail": "low" })
-
-        #  "image_url": { "url":  f"data:image/jpeg;base64,{base64_image}"
-        # {"type": "image_url", "image_url": { "url":  f"data:image/jpeg;base64,{base64_image}" , "detail": "low" }
-
-
-    # calculate the amount of openai input tokens in the message using the tiktoken library
-    #total_tokens = count_tokens(message)
-    #print(f"Number of tokens: {total_tokens}")
-    
-
-
-    
-
     # call the OpenAI API to get the explanation
-    
     response = client.chat.completions.create(
          model = os.getenv('AZURE_OPENAI_DEPLOYMENT'),
          messages=message)
 
-    #explanation = "This is a test explanation"
-    # create a dictionary to store the explanation, with the role and the content
     explanation = response.choices[0].message.content
-    # return the explanation
     return explanation
 
 
@@ -128,17 +75,8 @@ def explain_image(chunks):
     response = client.chat.completions.create(
          model = os.getenv('AZURE_OPENAI_DEPLOYMENT'),
          messages=message)
-
-    # calculate the amount of openai input tokens in the whole message using the tiktoken library
-    # total_tokens = count_tokens(message)
-    #print the number of tokens
-    # print(f"Number of tokens: {total_tokens}")
-
-
     # create a dictionary to store the explanation, with the role and the content
     explanation = response.choices[0].message.content
-    #return the list of explanations
-    #explanation= "Test explanation"
     return explanation
 
 
@@ -151,9 +89,6 @@ def main():
     explanations = explain_image(chunks)
     print(explanations)
     print("Number of tokens on the first chunk")
-    # look for the first file in the chunks directory
-    #first_chunk = chunks[0]
-    #print(explain_image_chunk( first_chunk))
 
 if __name__ == "__main__":
     main()
