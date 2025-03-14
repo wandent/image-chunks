@@ -30,7 +30,12 @@ def explain_image(image_path):
     # read the chunks
     chunks = read_chunks(image_path)
     # create a list to store the explanations
-    explanations = []
+    chunks = chunks[:16]
+    explanation = ""
+    message = []
+            # create a prompt for the model
+    prompt = "Explain the content of following image chunks: "
+    message= [{"role": "user", "content": prompt}]
     # loop into the chunks and explain each chunk
     for chunk in chunks:
         # open the image
@@ -40,29 +45,17 @@ def explain_image(image_path):
             buffer = BytesIO()
             img.save(buffer, format="PNG")
             img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            message.append({"role": "user", "content": f"data:image/jpeg;base64,{img_base64}", "detail": "low" })
             
-            # create a prompt for the model
-            prompt = "Explain the content of following image chunk: "
-            # call the OpenAI API to get the explanation
-            response = client.chat.completions.create(
-                    model = os.getenv('AZURE_OPENAI_DEPLOYMENT'),
-                    messages=[
-                        {"role": "user", "content": prompt},
-                        {"role": "user", "content": f"data:image/jpeg;base64,{img_base64}", "detail": "low" }
-                    ]
-            )
-            # create a dictionary to store the explanation, with the role and the content
-            explanation = {
-                "role": response.choices[0].message.role,
-                "content": response.choices[0].message.content,
-            }
-            # append the explanation to the list
-            explanations.append(explanation)
-            # add a two seconds delay to avoid hitting the rate limit
-            import time
-            time.sleep(2)
+        # call the OpenAI API to get the explanation
+    response = client.chat.completions.create(
+        model = os.getenv('AZURE_OPENAI_DEPLOYMENT'),
+        messages=message)
+
+    # create a dictionary to store the explanation, with the role and the content
+    explanation = response.choices[0].message.content
     # return the list of explanations
-    return explanations
+    return explanation
 
 
 # iterate over the explanations and summarize the content with openai
@@ -95,16 +88,7 @@ def main():
     chunks = read_chunks(image_path)
     # explain the image
     explanations = explain_image(chunks)
-    # summarize the explanations
-    # print the content of the explanations
-    for explanation in explanations:
-        print(f"Role: {explanation['role']}")
-        print(f"Content: {explanation['content']}")
-        print()
-
-    #summary = summarize_explanations(explanations)
-    # print the summary
-    print(summary)
+    print(explanations)
 
 if __name__ == "__main__":
     main()
