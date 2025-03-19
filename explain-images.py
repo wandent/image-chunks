@@ -82,6 +82,8 @@ def explain_image(chunks):
 
 def main():
     # set the image path to the directory image under the current directory
+    # capture the current time in a variable to calculate 
+
     image_path= "./image/chunks/"
     print(f"Reading chunks from {image_path}")
     chunks = read_chunks()
